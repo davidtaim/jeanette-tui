@@ -19,13 +19,6 @@ const TABLE_HEADERS: [&str; 9] = [
     "IN USE", "BSSID", "SSID", "MODE", "CHAN", "RATE", "SIGNAL", "BARS", "SECURITY",
 ];
 
-const PALETTES: [tailwind::Palette; 4] = [
-    tailwind::BLUE,
-    tailwind::EMERALD,
-    tailwind::INDIGO,
-    tailwind::RED,
-];
-
 const ITEM_HEIGHT: usize = 1;
 
 struct TableColors {
@@ -34,23 +27,19 @@ struct TableColors {
     header_fg: Color,
     row_fg: Color,
     selected_row_style_fg: Color,
-    selected_column_style_fg: Color,
-    selected_cell_style_fg: Color,
     normal_row_color: Color,
     footer_fg_color: Color,
     network_border_color: Color,
 }
 
 impl TableColors {
-    const fn new(color: &tailwind::Palette) -> Self {
+    const fn new() -> Self {
         Self {
             buffer_bg: Color::Reset,
             header_bg: Color::Green,
             header_fg: Color::Black,
             row_fg: tailwind::SLATE.c200,
             selected_row_style_fg: Color::Blue,
-            selected_column_style_fg: color.c400,
-            selected_cell_style_fg: color.c600,
             normal_row_color: Color::Reset,
             footer_fg_color: Color::Green,
             network_border_color: Color::Blue,
@@ -74,7 +63,7 @@ impl JeanetteApp {
             state: TableState::default().with_selected(0),
             longest_item_lens: constraint_len_calculator(&data_vec),
             scroll_state: ScrollbarState::new(data_vec.len() - 1 * ITEM_HEIGHT),
-            colors: TableColors::new(&PALETTES[0]),
+            colors: TableColors::new(),
             color_index: 0,
             items: data_vec,
         }
@@ -110,17 +99,8 @@ impl JeanetteApp {
         self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
     }
 
-    pub fn next_color(&mut self) {
-        self.color_index = (self.color_index + 1) % PALETTES.len();
-    }
-
-    pub fn previous_color(&mut self) {
-        let count = PALETTES.len();
-        self.color_index = (self.color_index + count - 1) % count;
-    }
-
     pub fn set_colors(&mut self) {
-        self.colors = TableColors::new(&PALETTES[self.color_index]);
+        self.colors = TableColors::new();
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> io::Result<()> {
@@ -129,13 +109,10 @@ impl JeanetteApp {
 
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    let shift_pressed = key.modifiers.contains(KeyModifiers::SHIFT);
                     match key.code {
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Down => self.next_row(),
                         KeyCode::Up => self.previous_row(),
-                        KeyCode::Right if shift_pressed => self.next_color(),
-                        KeyCode::Left if shift_pressed => self.previous_color(),
                         _ => {}
                     }
                 }
@@ -168,12 +145,6 @@ impl JeanetteApp {
             .add_modifier(Modifier::REVERSED)
             .fg(self.colors.selected_row_style_fg);
 
-        let selected_col_style = Style::default().fg(self.colors.selected_column_style_fg);
-
-        let selected_cell_style = Style::default()
-            .add_modifier(Modifier::REVERSED)
-            .fg(self.colors.selected_cell_style_fg);
-
         let header = TABLE_HEADERS
             .into_iter()
             .map(Cell::from)
@@ -191,6 +162,11 @@ impl JeanetteApp {
                 .height(1)
         });
 
+        let block_table = Block::bordered()
+            .title("Network List")
+            .border_type(BorderType::Plain)
+            .border_style(Style::new().fg(self.colors.network_border_color));
+
         let t = Table::new(
             rows,
             [
@@ -205,10 +181,9 @@ impl JeanetteApp {
                 Constraint::Min(self.longest_item_lens.8),
             ],
         )
+        .block(block_table)
         .header(header)
         .row_highlight_style(selected_row_style)
-        .column_highlight_style(selected_col_style)
-        .cell_highlight_style(selected_cell_style)
         .bg(self.colors.buffer_bg)
         .highlight_spacing(HighlightSpacing::Always);
         frame.render_stateful_widget(t, area, &mut self.state);
@@ -234,6 +209,7 @@ impl JeanetteApp {
 
         let paragraph_network_info = Paragraph::new(Text::from(network_info.connection)).block(
             Block::bordered()
+                .title("Network Info")
                 .border_type(BorderType::Plain)
                 .border_style(Style::new().fg(self.colors.network_border_color)),
         );
