@@ -26,9 +26,8 @@ const PALETTES: [tailwind::Palette; 4] = [
     tailwind::RED,
 ];
 
-const INFO_TEXT: [&str; 2] = [
-    "(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
-    "(Shift + →) next color | (Shift + ←) previous color",
+const INFO_TEXT: [&str; 1] = [
+    "(Q) quit | (↑) move up | (↓) move down",
 ];
 
 const ITEM_HEIGHT: usize = 1;
@@ -49,15 +48,15 @@ struct TableColors {
 impl TableColors {
     const fn new(color: &tailwind::Palette) -> Self {
         Self {
-            buffer_bg: tailwind::SLATE.c950,
-            header_bg: color.c900,
-            header_fg: tailwind::SLATE.c200,
+            buffer_bg: Color::Black,
+            header_bg: Color::Blue,
+            header_fg: Color::Black,
             row_fg: tailwind::SLATE.c200,
-            selected_row_style_fg: color.c400,
+            selected_row_style_fg: Color::Cyan,
             selected_column_style_fg: color.c400,
             selected_cell_style_fg: color.c600,
-            normal_row_color: tailwind::SLATE.c950,
-            alt_row_color: tailwind::SLATE.c900,
+            normal_row_color: Color::Black,
+            alt_row_color: Color::Black,
             footer_border_color: color.c400,
         }
     }
@@ -115,14 +114,6 @@ impl JeanetteApp {
         self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
     }
 
-    pub fn next_column(&mut self) {
-        self.state.select_next_column();
-    }
-
-    pub fn previous_column(&mut self) {
-        self.state.select_previous_column();
-    }
-
     pub fn next_color(&mut self) {
         self.color_index = (self.color_index + 1) % PALETTES.len();
     }
@@ -149,8 +140,6 @@ impl JeanetteApp {
                         KeyCode::Up => self.previous_row(),
                         KeyCode::Right if shift_pressed => self.next_color(),
                         KeyCode::Left if shift_pressed => self.previous_color(),
-                        KeyCode::Right => self.next_column(),
-                        KeyCode::Left => self.previous_column(),
                         _ => {}
                     }
                 }
@@ -165,7 +154,7 @@ impl JeanetteApp {
         self.set_colors();
 
         self.render_table(frame, rects[0]);
-        self.render_scrollbar(frame, rects[1]);
+        self.render_scrollbar(frame, rects[0]);
         self.render_footer(frame, rects[1]);
     }
 
@@ -206,8 +195,6 @@ impl JeanetteApp {
                 .height(1)
         });
 
-        let bar = " █ ";
-
         let t = Table::new(
             rows,
             [
@@ -226,12 +213,6 @@ impl JeanetteApp {
         .row_highlight_style(selected_row_style)
         .column_highlight_style(selected_col_style)
         .cell_highlight_style(selected_cell_style)
-        .highlight_symbol(Text::from(vec![
-            "".into(),
-            bar.into(),
-            bar.into(),
-            "".into(),
-        ]))
         .bg(self.colors.buffer_bg)
         .highlight_spacing(HighlightSpacing::Always);
         frame.render_stateful_widget(t, area, &mut self.state);
@@ -251,6 +232,10 @@ impl JeanetteApp {
         );
     }
 
+    fn render_network_info(&self, frame: &mut Frame, area: Rect) {
+
+    }
+
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
         let info_footer = Paragraph::new(Text::from_iter(INFO_TEXT))
             .style(
@@ -261,7 +246,7 @@ impl JeanetteApp {
             .centered()
             .block(
                 Block::bordered()
-                    .border_type(BorderType::Double)
+                    .border_type(BorderType::Plain)
                     .border_style(Style::new().fg(self.colors.footer_border_color)),
             );
         frame.render_widget(info_footer, area);
