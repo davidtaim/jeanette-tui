@@ -176,7 +176,7 @@ impl JeanetteApp {
             .style(header_style)
             .height(1);
 
-        let rows = self.items.iter().enumerate().map(|(i, data)| {
+        let rows = self.items.iter().map(|data| {
             let item = data.ref_array();
             item.into_iter()
                 .map(|content| Cell::from(Text::from(format!("{content}"))))
