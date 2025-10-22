@@ -4,7 +4,7 @@ use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout, Margin, Rect},
-    style::{Color, Modifier, Style, Stylize, palette::tailwind},
+    style::{Color, Modifier, Style, Stylize},
     text::Text,
     widgets::{
         Block, BorderType, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
@@ -38,7 +38,7 @@ impl TableColors {
             buffer_bg: Color::Reset,
             header_bg: Color::Green,
             header_fg: Color::Black,
-            row_fg: tailwind::SLATE.c200,
+            row_fg: Color::White,
             selected_row_style_fg: Color::Blue,
             normal_row_color: Color::Reset,
             footer_fg_color: Color::Green,
