@@ -1,6 +1,15 @@
 use std::{io::BufRead, process::Command};
 
 #[derive(Debug)]
+pub struct NetworkInfo {
+    pub device: String,
+    pub connection: String,
+    pub ip4_address: String,
+    pub ip4_gateway: String,
+    pub ip4_dns: String,
+}
+
+#[derive(Debug)]
 pub struct Network {
     pub in_use: String,
     pub bssid: String,
@@ -65,6 +74,65 @@ impl Network {
 pub struct NmcliWrapper {}
 
 impl NmcliWrapper {
+    pub fn get_device_name() -> String {
+        let output = Command::new("nmcli")
+            .args(["-t", "-f", "DEVICE", "connection", "show", "--active"])
+            .output()
+            .expect("failed");
+
+        if !output.status.success() {
+            eprintln!(
+                "Error gathering device name:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            return String::new();
+        }
+
+        let device_name = output.stdout.lines().next().unwrap();
+        device_name.unwrap()
+    }
+
+    pub fn get_device_info(device: String) -> NetworkInfo {
+        let output = Command::new("nmcli")
+            .args(["-t", "device", "show", device.as_str()])
+            .output()
+            .expect("failed");
+
+        let mut device_info = NetworkInfo {
+            device: String::new(),
+            connection: String::new(),
+            ip4_address: String::new(),
+            ip4_gateway: String::new(),
+            ip4_dns: String::new(),
+        };
+
+        output.stdout.lines().for_each(|line| {
+            let info = line.unwrap();
+            let parts: Vec<&str> = info.split(":").collect();
+            if parts.len() >= 2 {
+                match parts[0] {
+                    "GENERAL.DEVICE" => {
+                        device_info.device = parts[1].to_string();
+                    }
+                    "GENERAL.CONNECTION" => {
+                        device_info.connection = parts[1].to_string();
+                    }
+                    "IP4.ADDRESS[1]" => {
+                        device_info.ip4_address = parts[1].to_string();
+                    }
+                    "IP4.GATEWAY" => {
+                        device_info.ip4_gateway = parts[1].to_string();
+                    }
+                    "IP4.DNS[1]" => {
+                        device_info.ip4_dns = parts[1].to_string();
+                    }
+                    _ => {}
+                }
+            }
+        });
+        device_info
+    }
+
     pub fn get_networks_list() -> Vec<Network> {
         let output = Command::new("nmcli")
             .args([
@@ -79,7 +147,10 @@ impl NmcliWrapper {
             .expect("failed");
 
         if !output.status.success() {
-            eprintln!("Error:\n{}", String::from_utf8_lossy(&output.stderr));
+            eprintln!(
+                "Error gathering network list:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
             return Vec::new();
         }
 
