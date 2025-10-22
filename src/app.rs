@@ -46,10 +46,10 @@ impl TableColors {
     const fn new(color: &tailwind::Palette) -> Self {
         Self {
             buffer_bg: Color::Reset,
-            header_bg: Color::Blue,
+            header_bg: Color::Green,
             header_fg: Color::Black,
             row_fg: tailwind::SLATE.c200,
-            selected_row_style_fg: Color::Cyan,
+            selected_row_style_fg: Color::Blue,
             selected_column_style_fg: color.c400,
             selected_cell_style_fg: color.c600,
             normal_row_color: Color::Reset,
