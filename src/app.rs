@@ -1,16 +1,15 @@
-use std::io;
-
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
-    text::Text,
+    text::{Line, Text},
     widgets::{
         Block, BorderType, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         ScrollbarState, Table, TableState,
     },
 };
+use std::io;
 use unicode_width::UnicodeWidthStr;
 
 use crate::nmcli_wrapper::{Network, NmcliWrapper};
@@ -121,7 +120,7 @@ impl JeanetteApp {
     fn draw(&mut self, frame: &mut Frame) {
         let vertical = &Layout::vertical([
             Constraint::Min(5),
-            Constraint::Max(10),
+            Constraint::Length(7),
             Constraint::Length(1),
         ]);
         let rects = vertical.split(frame.area());
@@ -205,7 +204,15 @@ impl JeanetteApp {
         let device_name = NmcliWrapper::get_device_name();
         let network_info = NmcliWrapper::get_device_info(device_name);
 
-        let paragraph_network_info = Paragraph::new(Text::from(network_info.connection)).block(
+        let lines = vec![
+            Line::from(vec!["Device: ".cyan(), network_info.device.green()]),
+            Line::from(vec!["Connection: ".cyan(), network_info.connection.green()]),
+            Line::from(vec!["IP: ".cyan(), network_info.ip4_address.green()]),
+            Line::from(vec!["Gateway: ".cyan(), network_info.ip4_gateway.green()]),
+            Line::from(vec!["DNS: ".cyan(), network_info.ip4_dns.green()]),
+        ];
+
+        let paragraph_network_info = Paragraph::new(Text::from(lines)).block(
             Block::bordered()
                 .title("Network Info")
                 .border_type(BorderType::Plain)
