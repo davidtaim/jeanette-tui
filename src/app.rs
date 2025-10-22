@@ -1,12 +1,12 @@
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
-    layout::{Constraint, Layout, Margin, Rect},
+    layout::{Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Text},
     widgets::{
-        Block, BorderType, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
-        ScrollbarState, Table, TableState,
+        Block, BorderType, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar,
+        ScrollbarOrientation, ScrollbarState, Table, TableState,
     },
 };
 use std::io;
@@ -52,6 +52,7 @@ pub struct JeanetteApp {
     longest_item_lens: (u16, u16, u16, u16, u16, u16, u16, u16, u16),
     scroll_state: ScrollbarState,
     colors: TableColors,
+    show_connect_popup: bool,
 }
 
 impl JeanetteApp {
@@ -63,6 +64,7 @@ impl JeanetteApp {
             scroll_state: ScrollbarState::new(data_vec.len() - 1 * ITEM_HEIGHT),
             colors: TableColors::new(),
             items: data_vec,
+            show_connect_popup: false,
         }
     }
 
@@ -108,6 +110,13 @@ impl JeanetteApp {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('s') => self.scan_networks_list(),
+                        KeyCode::Char('c') => self.show_connect_popup = true,
+                        KeyCode::Esc => {
+                            if self.show_connect_popup {
+                                self.show_connect_popup = false;
+                            }
+                        }
                         KeyCode::Down => self.next_row(),
                         KeyCode::Up => self.previous_row(),
                         _ => {}
@@ -131,6 +140,34 @@ impl JeanetteApp {
         self.render_scrollbar(frame, rects[0]);
         self.render_network_info(frame, rects[1]);
         self.render_footer(frame, rects[2]);
+
+        if self.show_connect_popup {
+            self.render_edit_popup(frame, frame.area());
+        }
+    }
+
+    fn render_edit_popup(&mut self, frame: &mut Frame, area: Rect) {
+        let connection = &self.items[self.state.selected().unwrap()];
+        let block = Block::bordered()
+            .title("Connect to network")
+            .border_type(BorderType::Plain)
+            .border_style(Style::new().fg(self.colors.network_border_color));
+
+        let area_popup = self.popup_area(area, 80, 40);
+        frame.render_widget(Clear, area_popup);
+        frame.render_widget(block, area_popup);
+    }
+
+    fn popup_area(&mut self, area: Rect, percent_x: u16, percent_y: u16) -> Rect {
+        let vertical = Layout::vertical([Constraint::Percentage(percent_y)]).flex(Flex::Center);
+        let horizontal = Layout::horizontal([Constraint::Percentage(percent_x)]).flex(Flex::Center);
+        let [area] = vertical.areas(area);
+        let [area] = horizontal.areas(area);
+        area
+    }
+
+    fn scan_networks_list(&mut self) {
+        self.items = NmcliWrapper::get_networks_list();
     }
 
     fn render_table(&mut self, frame: &mut Frame, area: Rect) {
