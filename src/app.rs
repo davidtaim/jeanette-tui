@@ -1,15 +1,10 @@
 use std::io;
 
 use ratatui::{
-    DefaultTerminal, Frame,
-    crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
-    layout::{Constraint, Layout, Margin, Rect},
-    style::{Color, Modifier, Style, Stylize, palette::tailwind},
-    text::Text,
-    widgets::{
+    crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers}, layout::{Constraint, Layout, Margin, Rect}, style::{palette::tailwind, Color, Modifier, Style, Stylize}, text::{Text, ToLine}, widgets::{
         Block, BorderType, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         ScrollbarState, Table, TableState,
-    },
+    }, DefaultTerminal, Frame
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -26,8 +21,6 @@ const PALETTES: [tailwind::Palette; 4] = [
     tailwind::RED,
 ];
 
-const INFO_TEXT: [&str; 1] = ["(Q) quit | (↑) move up | (↓) move down"];
-
 const ITEM_HEIGHT: usize = 1;
 
 struct TableColors {
@@ -39,7 +32,8 @@ struct TableColors {
     selected_column_style_fg: Color,
     selected_cell_style_fg: Color,
     normal_row_color: Color,
-    footer_border_color: Color,
+    footer_fg_color: Color,
+    network_border_color: Color,
 }
 
 impl TableColors {
@@ -53,7 +47,8 @@ impl TableColors {
             selected_column_style_fg: color.c400,
             selected_cell_style_fg: color.c600,
             normal_row_color: Color::Reset,
-            footer_border_color: color.c400,
+            footer_fg_color: Color::Green,
+            network_border_color: Color::Blue,
         }
     }
 }
@@ -144,14 +139,19 @@ impl JeanetteApp {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
-        let vertical = &Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+        let vertical = &Layout::vertical([
+            Constraint::Min(5),
+            Constraint::Max(10),
+            Constraint::Length(1),
+        ]);
         let rects = vertical.split(frame.area());
 
         self.set_colors();
 
         self.render_table(frame, rects[0]);
         self.render_scrollbar(frame, rects[0]);
-        self.render_footer(frame, rects[1]);
+        self.render_network_info(frame, rects[1]);
+        self.render_footer(frame, rects[2]);
     }
 
     fn render_table(&mut self, frame: &mut Frame, area: Rect) {
@@ -223,21 +223,28 @@ impl JeanetteApp {
         );
     }
 
-    fn render_network_info(&self, frame: &mut Frame, area: Rect) {}
+    fn render_network_info(&self, frame: &mut Frame, area: Rect) {
+
+        let device_name = NmcliWrapper::get_device_name();
+        let network_info = NmcliWrapper::get_device_info(device_name);
+
+        let paragraph_network_info = Paragraph::new(Text::from(network_info.connection)).block(
+            Block::bordered()
+                .border_type(BorderType::Plain)
+                .border_style(Style::new().fg(self.colors.network_border_color)),
+        );
+
+        frame.render_widget(paragraph_network_info, area);
+    }
 
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
-        let info_footer = Paragraph::new(Text::from_iter(INFO_TEXT))
+        let info_footer = Paragraph::new(Text::from("(Q) quit | (↑) move up | (↓) move down"))
             .style(
                 Style::new()
-                    .fg(self.colors.row_fg)
+                    .fg(self.colors.footer_fg_color)
                     .bg(self.colors.buffer_bg),
             )
-            .centered()
-            .block(
-                Block::bordered()
-                    .border_type(BorderType::Plain)
-                    .border_style(Style::new().fg(self.colors.footer_border_color)),
-            );
+            .centered();
         frame.render_widget(info_footer, area);
     }
 }
