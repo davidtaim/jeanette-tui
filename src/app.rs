@@ -26,9 +26,7 @@ const PALETTES: [tailwind::Palette; 4] = [
     tailwind::RED,
 ];
 
-const INFO_TEXT: [&str; 1] = [
-    "(Q) quit | (↑) move up | (↓) move down",
-];
+const INFO_TEXT: [&str; 1] = ["(Q) quit | (↑) move up | (↓) move down"];
 
 const ITEM_HEIGHT: usize = 1;
 
@@ -41,22 +39,20 @@ struct TableColors {
     selected_column_style_fg: Color,
     selected_cell_style_fg: Color,
     normal_row_color: Color,
-    alt_row_color: Color,
     footer_border_color: Color,
 }
 
 impl TableColors {
     const fn new(color: &tailwind::Palette) -> Self {
         Self {
-            buffer_bg: Color::Black,
+            buffer_bg: Color::Reset,
             header_bg: Color::Blue,
             header_fg: Color::Black,
             row_fg: tailwind::SLATE.c200,
             selected_row_style_fg: Color::Cyan,
             selected_column_style_fg: color.c400,
             selected_cell_style_fg: color.c600,
-            normal_row_color: Color::Black,
-            alt_row_color: Color::Black,
+            normal_row_color: Color::Reset,
             footer_border_color: color.c400,
         }
     }
@@ -181,17 +177,12 @@ impl JeanetteApp {
             .height(1);
 
         let rows = self.items.iter().enumerate().map(|(i, data)| {
-            let color = match i % 2 {
-                0 => self.colors.normal_row_color,
-                _ => self.colors.alt_row_color,
-            };
-
             let item = data.ref_array();
             item.into_iter()
                 .map(|content| Cell::from(Text::from(format!("{content}"))))
                 .collect::<Row>()
                 .style(Style::new().fg(self.colors.row_fg))
-                .bg(color)
+                .bg(self.colors.normal_row_color)
                 .height(1)
         });
 
@@ -232,9 +223,7 @@ impl JeanetteApp {
         );
     }
 
-    fn render_network_info(&self, frame: &mut Frame, area: Rect) {
-
-    }
+    fn render_network_info(&self, frame: &mut Frame, area: Rect) {}
 
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
         let info_footer = Paragraph::new(Text::from_iter(INFO_TEXT))
