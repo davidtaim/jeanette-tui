@@ -1,10 +1,15 @@
 use std::io;
 
 use ratatui::{
-    crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers}, layout::{Constraint, Layout, Margin, Rect}, style::{palette::tailwind, Color, Modifier, Style, Stylize}, text::{Text, ToLine}, widgets::{
+    DefaultTerminal, Frame,
+    crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
+    layout::{Constraint, Layout, Margin, Rect},
+    style::{Color, Modifier, Style, Stylize, palette::tailwind},
+    text::Text,
+    widgets::{
         Block, BorderType, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         ScrollbarState, Table, TableState,
-    }, DefaultTerminal, Frame
+    },
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -224,7 +229,6 @@ impl JeanetteApp {
     }
 
     fn render_network_info(&self, frame: &mut Frame, area: Rect) {
-
         let device_name = NmcliWrapper::get_device_name();
         let network_info = NmcliWrapper::get_device_info(device_name);
 
