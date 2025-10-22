@@ -2,7 +2,7 @@ use std::io;
 
 use ratatui::{
     DefaultTerminal, Frame,
-    crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
+    crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize, palette::tailwind},
     text::Text,
@@ -53,7 +53,6 @@ pub struct JeanetteApp {
     longest_item_lens: (u16, u16, u16, u16, u16, u16, u16, u16, u16),
     scroll_state: ScrollbarState,
     colors: TableColors,
-    color_index: usize,
 }
 
 impl JeanetteApp {
@@ -64,7 +63,6 @@ impl JeanetteApp {
             longest_item_lens: constraint_len_calculator(&data_vec),
             scroll_state: ScrollbarState::new(data_vec.len() - 1 * ITEM_HEIGHT),
             colors: TableColors::new(),
-            color_index: 0,
             items: data_vec,
         }
     }
