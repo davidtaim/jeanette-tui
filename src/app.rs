@@ -10,6 +10,7 @@ use ratatui::{
     },
 };
 use std::io;
+use tui_input::Input;
 use unicode_width::UnicodeWidthStr;
 
 use crate::nmcli_wrapper::{Network, NmcliWrapper};
@@ -19,6 +20,11 @@ const TABLE_HEADERS: [&str; 9] = [
 ];
 
 const ITEM_HEIGHT: usize = 1;
+
+enum InputMode {
+    Normal,
+    Editing,
+}
 
 struct TableColors {
     buffer_bg: Color,
@@ -53,6 +59,8 @@ pub struct JeanetteApp {
     scroll_state: ScrollbarState,
     colors: TableColors,
     show_connect_popup: bool,
+    input_mode: InputMode,
+    password_input: Input,
 }
 
 impl JeanetteApp {
@@ -65,6 +73,8 @@ impl JeanetteApp {
             colors: TableColors::new(),
             items: data_vec,
             show_connect_popup: false,
+            input_mode: InputMode::Normal,
+            password_input: Input::default(),
         }
     }
 
@@ -108,18 +118,25 @@ impl JeanetteApp {
 
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Char('s') => self.scan_networks_list(),
-                        KeyCode::Char('c') => self.show_connect_popup = true,
-                        KeyCode::Esc => {
-                            if self.show_connect_popup {
+                    match self.input_mode {
+                        InputMode::Normal => match key.code {
+                            KeyCode::Char('q') => return Ok(()),
+                            KeyCode::Char('s') => self.scan_networks_list(),
+                            KeyCode::Char('c') => {
+                                self.input_mode = InputMode::Editing;
+                                self.show_connect_popup = true;
+                            }
+                            KeyCode::Down => self.next_row(),
+                            KeyCode::Up => self.previous_row(),
+                            _ => {}
+                        },
+                        InputMode::Editing => match key.code {
+                            KeyCode::Esc => {
+                                self.input_mode = InputMode::Normal;
                                 self.show_connect_popup = false;
                             }
-                        }
-                        KeyCode::Down => self.next_row(),
-                        KeyCode::Up => self.previous_row(),
-                        _ => {}
+                            _ => {}
+                        },
                     }
                 }
             }
@@ -148,14 +165,29 @@ impl JeanetteApp {
 
     fn render_edit_popup(&mut self, frame: &mut Frame, area: Rect) {
         let connection = &self.items[self.state.selected().unwrap()];
+
         let block = Block::bordered()
             .title("Connect to network")
             .border_type(BorderType::Plain)
             .border_style(Style::new().fg(self.colors.network_border_color));
 
         let area_popup = self.popup_area(area, 80, 40);
-        frame.render_widget(Clear, area_popup);
-        frame.render_widget(block, area_popup);
+
+        let width = area_popup.width.max(3) - 3;
+
+        let scroll = self.password_input.visual_scroll(width as usize);
+
+        let input = Paragraph::new(self.password_input.value())
+            .scroll((0, scroll as u16))
+            .block(Block::bordered().title("Password"));
+
+        // frame.render_widget(Clear, area_popup);
+        // frame.render_widget(block, area_popup);
+        frame.render_widget(input, area_popup);
+
+        let x = self.password_input.visual_cursor().max(scroll) - scroll + 1;
+        frame.set_cursor_position((area_popup.x + x as u16, area_popup.y + 1));
+
     }
 
     fn popup_area(&mut self, area: Rect, percent_x: u16, percent_y: u16) -> Rect {
