@@ -11,6 +11,7 @@ use ratatui::{
 };
 use std::io;
 use tui_input::Input;
+use tui_input::backend::crossterm::EventHandler;
 use unicode_width::UnicodeWidthStr;
 
 use crate::nmcli_wrapper::{Network, NmcliWrapper};
@@ -61,6 +62,7 @@ pub struct JeanetteApp {
     show_connect_popup: bool,
     input_mode: InputMode,
     password_input: Input,
+    network_selected: String,
 }
 
 impl JeanetteApp {
@@ -75,6 +77,7 @@ impl JeanetteApp {
             show_connect_popup: false,
             input_mode: InputMode::Normal,
             password_input: Input::default(),
+            network_selected: String::new(),
         }
     }
 
@@ -116,7 +119,9 @@ impl JeanetteApp {
         loop {
             terminal.draw(|frame| self.draw(frame))?;
 
-            if let Event::Key(key) = event::read()? {
+            let event = event::read()?;
+
+            if let Event::Key(key) = event {
                 if key.kind == KeyEventKind::Press {
                     match self.input_mode {
                         InputMode::Normal => match key.code {
@@ -135,7 +140,12 @@ impl JeanetteApp {
                                 self.input_mode = InputMode::Normal;
                                 self.show_connect_popup = false;
                             }
-                            _ => {}
+                            KeyCode::Enter => {
+                                self.connect_to_network();
+                            }
+                            _ => {
+                                self.password_input.handle_event(&event);
+                            }
                         },
                     }
                 }
@@ -167,11 +177,11 @@ impl JeanetteApp {
         let connection = &self.items[self.state.selected().unwrap()];
 
         let block = Block::bordered()
-            .title("Connect to network")
+            .title("Password")
             .border_type(BorderType::Plain)
             .border_style(Style::new().fg(self.colors.network_border_color));
 
-        let area_popup = self.popup_area(area, 80, 40);
+        let area_popup = self.popup_area(area, 40, 10);
 
         let width = area_popup.width.max(3) - 3;
 
@@ -179,7 +189,7 @@ impl JeanetteApp {
 
         let input = Paragraph::new(self.password_input.value())
             .scroll((0, scroll as u16))
-            .block(Block::bordered().title("Password"));
+            .block(block);
 
         // frame.render_widget(Clear, area_popup);
         // frame.render_widget(block, area_popup);
@@ -187,7 +197,6 @@ impl JeanetteApp {
 
         let x = self.password_input.visual_cursor().max(scroll) - scroll + 1;
         frame.set_cursor_position((area_popup.x + x as u16, area_popup.y + 1));
-
     }
 
     fn popup_area(&mut self, area: Rect, percent_x: u16, percent_y: u16) -> Rect {
@@ -198,7 +207,15 @@ impl JeanetteApp {
         area
     }
 
+    fn connect_to_network(&mut self) {
+        NmcliWrapper::connect_to_network(
+            self.network_selected.as_str(),
+            self.password_input.value(),
+        );
+    }
+
     fn scan_networks_list(&mut self) {
+        NmcliWrapper::rescan_networks();
         self.items = NmcliWrapper::get_networks_list();
     }
 

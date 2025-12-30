@@ -74,6 +74,65 @@ impl Network {
 pub struct NmcliWrapper {}
 
 impl NmcliWrapper {
+    pub fn connect_to_network(network_name: &str, password: &str) {
+        let output = Command::new("nmcli")
+            .args([
+                "device",
+                "wifi",
+                "connect",
+                network_name,
+                "password",
+                password,
+            ])
+            .output()
+            .expect("failed to connect");
+
+        println!("Some debug!!!");
+
+        output.stdout.lines().for_each(|l| println!("{:?}", l));
+    }
+
+    pub fn rescan_networks() {
+        Command::new("nmcli")
+            .args(["device", "wifi", "rescan"])
+            .output()
+            .expect("failed to rescan networks");
+    }
+
+    pub fn get_saved_networks() {
+        let output = Command::new("nmcli")
+        .args([
+            "-t",
+            "-f",
+            "NAME,TYPE",
+            "connection",
+            "show"
+        ])
+        .output()
+        .expect("failed to get saved networks");
+
+        if !output.status.success() {
+            eprintln!(
+                "Error gathering device name:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            // return String::new();
+        }
+
+        output.stdout.lines().for_each(|line| {
+            let part = line.unwrap();
+            if part.ends_with("wireless") && !part.starts_with("Hotspot") {
+                let parts: Vec<&str> = part.split(":").collect();
+                println!("{}", parts[0]);
+            }
+        });
+
+    }
+
+    pub fn delete_network() {
+        
+    }
+
     pub fn get_device_name() -> String {
         let output = Command::new("nmcli")
             .args(["-t", "-f", "DEVICE", "connection", "show", "--active"])
